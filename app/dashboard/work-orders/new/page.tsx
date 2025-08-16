@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { ProtectedRoute } from '@/components/protected-route'
+import { useAuth } from '@/lib/auth-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,6 +35,7 @@ interface WorkOrderService {
 
 export default function NewWorkOrderPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -156,7 +158,8 @@ export default function NewWorkOrderPage() {
           status: formData.status,
           payment_status: formData.payment_status,
           scheduled_date: formData.scheduled_date || null,
-          total_amount: formData.total_amount
+          total_amount: formData.total_amount,
+          created_by: user?.id
         }])
         .select()
         .single()

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS public.clients (
     client_type client_type DEFAULT 'Individual',
     status worker_status DEFAULT 'Active',
     notes TEXT,
+    created_by UUID REFERENCES public.users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.services (
     name TEXT NOT NULL,
     description TEXT,
     price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
+    created_by UUID REFERENCES public.users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -45,6 +47,7 @@ CREATE TABLE IF NOT EXISTS public.workers (
     email TEXT,
     phone TEXT,
     status worker_status DEFAULT 'Active',
+    created_by UUID REFERENCES public.users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -60,6 +63,7 @@ CREATE TABLE IF NOT EXISTS public.work_orders (
     scheduled_date TIMESTAMP WITH TIME ZONE,
     completed_date TIMESTAMP WITH TIME ZONE,
     total_amount DECIMAL(10,2) NOT NULL CHECK (total_amount >= 0),
+    created_by UUID REFERENCES public.users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -96,65 +100,90 @@ CREATE POLICY "Users can view own profile" ON public.users
 CREATE POLICY "Users can update own profile" ON public.users
     FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "Users can view all clients" ON public.clients
-    FOR SELECT USING (true);
+-- Clients: Users can only see clients they created
+CREATE POLICY "Users can view own clients" ON public.clients
+    FOR SELECT USING (auth.uid() = created_by);
 
 CREATE POLICY "Users can insert clients" ON public.clients
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (auth.uid() = created_by);
 
-CREATE POLICY "Users can update clients" ON public.clients
-    FOR UPDATE USING (true);
+CREATE POLICY "Users can update own clients" ON public.clients
+    FOR UPDATE USING (auth.uid() = created_by);
 
-CREATE POLICY "Users can delete clients" ON public.clients
-    FOR DELETE USING (true);
+CREATE POLICY "Users can delete own clients" ON public.clients
+    FOR DELETE USING (auth.uid() = created_by);
 
-CREATE POLICY "Users can view all services" ON public.services
-    FOR SELECT USING (true);
+-- Services: Users can only see services they created
+CREATE POLICY "Users can view own services" ON public.services
+    FOR SELECT USING (auth.uid() = created_by);
 
 CREATE POLICY "Users can insert services" ON public.services
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (auth.uid() = created_by);
 
-CREATE POLICY "Users can update services" ON public.services
-    FOR UPDATE USING (true);
+CREATE POLICY "Users can update own services" ON public.services
+    FOR UPDATE USING (auth.uid() = created_by);
 
-CREATE POLICY "Users can delete services" ON public.services
-    FOR DELETE USING (true);
+CREATE POLICY "Users can delete own services" ON public.services
+    FOR DELETE USING (auth.uid() = created_by);
 
-CREATE POLICY "Users can view all workers" ON public.workers
-    FOR SELECT USING (true);
+-- Workers: Users can only see workers they created
+CREATE POLICY "Users can view own workers" ON public.workers
+    FOR SELECT USING (auth.uid() = created_by);
 
 CREATE POLICY "Users can insert workers" ON public.workers
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (auth.uid() = created_by);
 
-CREATE POLICY "Users can update workers" ON public.workers
-    FOR UPDATE USING (true);
+CREATE POLICY "Users can update own workers" ON public.workers
+    FOR UPDATE USING (auth.uid() = created_by);
 
-CREATE POLICY "Users can delete workers" ON public.workers
-    FOR DELETE USING (true);
+CREATE POLICY "Users can delete own workers" ON public.workers
+    FOR DELETE USING (auth.uid() = created_by);
 
-CREATE POLICY "Users can view all work orders" ON public.work_orders
-    FOR SELECT USING (true);
+-- Work Orders: Users can only see work orders they created
+CREATE POLICY "Users can view own work orders" ON public.work_orders
+    FOR SELECT USING (auth.uid() = created_by);
 
 CREATE POLICY "Users can insert work orders" ON public.work_orders
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (auth.uid() = created_by);
 
-CREATE POLICY "Users can update work orders" ON public.work_orders
-    FOR UPDATE USING (true);
+CREATE POLICY "Users can update own work orders" ON public.work_orders
+    FOR UPDATE USING (auth.uid() = created_by);
 
-CREATE POLICY "Users can delete work orders" ON public.work_orders
-    FOR DELETE USING (true);
+CREATE POLICY "Users can delete own work orders" ON public.work_orders
+    FOR DELETE USING (auth.uid() = created_by);
 
-CREATE POLICY "Users can view all work order services" ON public.work_order_services
-    FOR SELECT USING (true);
+-- Work Order Services: Users can only see services for work orders they created
+CREATE POLICY "Users can view own work order services" ON public.work_order_services
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.work_orders 
+            WHERE id = work_order_id AND created_by = auth.uid()
+        )
+    );
 
 CREATE POLICY "Users can insert work order services" ON public.work_order_services
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.work_orders 
+            WHERE id = work_order_id AND created_by = auth.uid()
+        )
+    );
 
-CREATE POLICY "Users can update work order services" ON public.work_order_services
-    FOR UPDATE USING (true);
+CREATE POLICY "Users can update own work order services" ON public.work_order_services
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM public.work_orders 
+            WHERE id = work_order_id AND created_by = auth.uid()
+        )
+    );
 
-CREATE POLICY "Users can delete work order services" ON public.work_order_services
-    FOR DELETE USING (true);
+CREATE POLICY "Users can delete own work order services" ON public.work_order_services
+    FOR DELETE USING (
+        EXISTS (
+            SELECT 1 FROM public.work_orders 
+            WHERE id = work_order_id AND created_by = auth.uid()
+        )
+    );
 
 -- Create functions for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()

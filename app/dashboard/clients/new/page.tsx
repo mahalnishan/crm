@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { ProtectedRoute } from '@/components/protected-route'
+import { useAuth } from '@/lib/auth-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,7 @@ import Link from 'next/link'
 
 export default function NewClientPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   
   const [formData, setFormData] = useState({
@@ -50,7 +52,10 @@ export default function NewClientPage() {
     try {
       const { error } = await supabase
         .from('clients')
-        .insert([formData])
+        .insert([{
+          ...formData,
+          created_by: user?.id
+        }])
 
       if (error) throw error
 
